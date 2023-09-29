@@ -1,0 +1,18 @@
+Convert the following question into a search term in the Advanced Query Syntax AQS fmat that would return the most relevant documents that could help answer the question. Try and include alternative wds phrases where appropriate.
+
+remove any words that are common like and, or, a, is, the, on, in etc
+
+examples:
+"input": "What are the key findings from the latest annual sales rept?", "output": "annual sales rept key findings highlights summary"
+"input": "Can you find a presentation on the company's new product line?", "output": "presentation slideshow deck company new product line new products product launch"
+"input": "What are the step-by-step instructions f troubleshooting the XYZ machine?", "output": "troubleshooting repair maintenance XYZ machine equipment instructions guide steps manual"
+"input": "Are there any recent market analysis repts f the electronics industry?", "output": "market analysis rept market research industry analysis recent latest updated electronics industry consumer electronics"
+"input": "What are the safety guidelines f using the ABC equipment?", "output": "safety guidelines safety procedures safety instructions ABC equipment device machine"
+"input": "Can you find any documents on the company's sustainability initiatives?", "output": "sustainability initiatives environmental effts green practices documents repts presentations"
+"input": "Is there a user manual f the latest software version of our CRM system?", "output": "user manual user guide handbook software CRM system latest version updated current"
+"input": "Are there any meeting minutes discussing the Q1 marketing strategy?", "output": "meeting minutes meeting notes Q1 marketing strategy first quarter marketing marketing plan"
+"input": "What are the specifications and features of our product model X123?", "output": "specifications features details product model X123 model X123 X123 product"
+"input": "Can you locate any training materials f new hires on the company intranet?", "output": "training materials training documents onboarding resources new hires new employees company intranet internal resources"
+
+Question:
+{query}
