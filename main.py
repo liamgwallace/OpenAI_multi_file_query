@@ -45,14 +45,8 @@ assert OPENAI_API_KEY, "OPENAI_API_KEY environment variable is missing from .env
 
 OPENAI_API_MODEL = os.getenv("OPENAI_API_MODEL", "gpt-3.5-turbo")
 assert OPENAI_API_MODEL, "OPENAI_API_MODEL environment variable is missing from .env"
-
-def print_verbose_old(*args):
-    if verbose:
-        print("##############################################################")
-        a=input("a")
         
 def print_verbose(*args):
-
     if verbose:
         print("##############################################################")
         for arg in args:
@@ -126,9 +120,6 @@ def similarity_search_and_extract(query, db, documents, num_docs):
     selected_docs = [db[i] for i in unique_indices]
     return selected_docs
 
-
-
-
 def llm_query_split_docs(query,folder_path):
     
     search_term = extract_search_term(query)
@@ -151,15 +142,7 @@ def llm_query_split_docs(query,folder_path):
         separator="\n",
         length_function=len,
     )
-    
-    
-    
-    ###
-    #db = FAISS.from_texts(texts, embeddings)      
-    #docs = db.similarity_search(query)
-    ###
-    
-    
+  
     split_docs = text_splitter.split_documents(documents)
     
     print_verbose(f"making {len(split_docs)}embeddings")       
