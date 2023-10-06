@@ -1,26 +1,48 @@
 
 # Document Search Engine
 
-This application allows users to search through PDF documents within a folder by inputting a query. First it generates a keyword search based on the user query. This is used to return relevant documents. Using that document list it creates embeddings to do a vector search to return relevant text. It then uses OpenAI for answering questions based on the content found in the documents.
+This project provides a solution for querying content within documents using OpenAI's model. The tool not only extracts content from various file formats like .pdf, .docx, and .pptx, but also indexes and searches them efficiently. First it generates a keyword search based on the user query. This is used to return relevant documents. If the files are not already indexed, if not they will be split and indexed and added to the database. all the relevant embeddings are retrieved from the db and are vector searched to return relevant text from the db. It then uses OpenAI for answering questions based on the content found in the documents.
 
-## Files in the Repository
+## File Summary
 
-1. `main.py`: Contains the primary code for querying, processing, and displaying results.
-2. `index_search.py`: Provides utilities for searching for files in a folder based on given search terms.
-3. `search_query_prompt.txt`: text file containing the prompt to generate windows search query
+### main.py
+The main script orchestrates the entire flow of the program. It integrates different components like document loading, embedding generation, database operations, and OpenAI API calls to provide a seamless querying experience to the user.
+
+### .env
+This file contains environment variables, mainly the OpenAI API key and model specifications.
+
+### document_db.py
+Handles database operations for the project. It utilizes pickling to save and retrieve the indexed documents, metadata, embeddings, etc.
+
+### document_loader.py
+Facilitates loading content from various file formats. It reads the content from PDFs, DOCX, and PPTX files and provides them in a unified format.
+
+### embeddings.py
+Provides functionality for generating and querying embeddings for text using OpenAI's model and ChromaDB.
+
+### ai_prompts.py
+Contains prompt templates for generating search keywords and refining documents based on user queries.
+
+### token_counter.py
+Utility functions for counting tokens in text strings and OpenAI messages.
+
+### index_search.py
+Functions to build search queries and search for files in a given folder using Windows Search.
 
 ## Prerequisites
 - Libraries: 
-  - `json`
-  - `sys`
-  - `faiss`
-  - `argparse`
-  - `os`
-  - `tkinter`
-  - `dotenv`
-  - `win32com`
-  - `pythoncom`
-  - `re`
+  - PyPDF2
+  - python-docx
+  - python-pptx
+  - pywin32
+  - tkinter
+  - dotenv
+  - openai
+  - argparse
+  - chromadb
+  - tiktoken
+  - langchain
+There may be more, I used OpenAI to generate this
 
 ## Setup
 
@@ -46,7 +68,7 @@ This application allows users to search through PDF documents within a folder by
    python main.py
    ```
 
-2. You will be prompted to input a query. Enter your query related to the content you wish to search in the PDF documents.
+2. You will be prompted to input a query. Enter your query related to the content you wish to search in the documents.
 
 3. The application will display the answer based on the content found in the documents.
 
@@ -60,19 +82,12 @@ This application allows users to search through PDF documents within a folder by
 
 ## Limitations
 
-1. Limited to Windows as the Windows folder containing the PDFs must be indexed.
-2. The application currently supports only PDF documents.
+1. Limited to Windows as the Windows folder containing the files must be indexed.
 
 ## Future Work
 
-- Extend support for other document formats. Possibly use Llama index 
-- Smarter ways to return found chunks. 
-  - Return the top n chunks and then also return the neighbouring chunks from those documents to increase context.
-  - I'll need to do my own file splitting and vector creation to allow,
-- Use map reduce method to perform deep search on lots of text
-- Improve response from AI to include context such as document title, relevant page number or section number. Or even quoted text.(have a semi-working version of this)
-- Add conversation memory to the chats
+- write OpenAI query - add in [existing repo](https://github.com/liamgwallace/OpenAI-FunctionCalling-HomeAssistantTools) with tools
 - Update to use OpenAI function calling
-- Get away from Langchain
+- Add conversation memory to the chats
 - Provide a graphical user interface for easier interaction.
 
