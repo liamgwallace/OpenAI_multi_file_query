@@ -216,7 +216,7 @@ def document_query(user_query, folder_paths, chat_history, doc_db):
     # print(f"\nresult: {result}\n")
 
     texts_and_metadatas=combine_texts_with_metadata(result['texts'], result['metadatas'])    
-    print_verbose(f"\ntexts_and_metadatas:",texts_and_metadatas)
+    # print_verbose(f"\ntexts_and_metadatas:",texts_and_metadatas)
     for text in texts_and_metadatas:
         print(f"num tokens: {num_tokens_from_strings(text, OPENAI_API_MODEL)}")
 
@@ -232,7 +232,7 @@ def document_query(user_query, folder_paths, chat_history, doc_db):
     print(f"len combined_texts: {len(combined_texts)}")
     for text in combined_texts:
         print(f"num tokens: {num_tokens_from_strings(text, OPENAI_API_MODEL)}")
-    print_verbose(f"\ncombined_texts:",combined_texts)
+    # print_verbose(f"\ncombined_texts:",combined_texts)
         #or reduce mode
             #Loop and create answer for each section
             #create final answer from sections
