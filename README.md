@@ -46,7 +46,7 @@ python main.py
 ### main.py
 The main script orchestrates the entire flow of the program. It integrates different components like document loading, embedding generation, database operations, and OpenAI API calls to provide a seamless querying experience to the user.
 
-### settings
+#### settings
 - num_files=30 - Number of files to return in the filesearch
 - num_vector_results=20 - number of vector results to retrieve from the vector search returned files embeddings
 - neighbor_text_count=2 - number of neighbouring texts to retrieve from the found vectors
