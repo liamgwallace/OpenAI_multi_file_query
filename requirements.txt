@@ -1,0 +1,11 @@
+PyPDF2
+python-docx
+python-pptx
+pywin32
+tkinter
+dotenv
+openai
+argparse
+chromadb
+tiktoken
+langchain

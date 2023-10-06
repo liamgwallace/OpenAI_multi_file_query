@@ -1,7 +1,45 @@
 
-# Document Search Engine
+# Project: Document Query Tool with OpenAI Integration
 
-This project provides a solution for querying content within documents using OpenAI's model. The tool not only extracts content from various file formats like .pdf, .docx, and .pptx, but also indexes and searches them efficiently. First it generates a keyword search based on the user query. This is used to return relevant documents. If the files are not already indexed, if not they will be split and indexed and added to the database. all the relevant embeddings are retrieved from the db and are vector searched to return relevant text from the db. It then uses OpenAI for answering questions based on the content found in the documents.
+## Overview
+This project provides a solution for querying content within documents using OpenAI's model. The tool not only extracts content from various file formats like .pdf, .docx, and .pptx, but also indexes and searches them efficiently. The major advantage of this tool is its ability to process queries in natural language, making it intuitive and user-friendly. It leverages the power of OpenAI's models to generate and refine queries and integrates with a custom database to efficiently retrieve and display results.
+
+## Installation
+
+### Prerequisites:
+- Python 3.7 or higher.
+- Required Python libraries: PyPDF2, python-docx, python-pptx, win32api.
+- An OpenAI API Key.
+
+### Steps:
+
+1. Clone the repository:
+```
+git clone <repository_url>
+cd <repository_directory>
+```
+2. Create a virtual environment:
+```
+python -m venv venv
+source venv/bin/activate  # On Windows: .env\Scriptsctivate
+```
+3. Install the required packages:
+```
+pip install -r requirements.txt
+```
+4. Set up your OpenAI API Key:
+   - Create a .env file in the root directory of the project.
+   - Add your OpenAI API key:
+```
+OPENAI_API_KEY=YOUR_OPENAI_API_KEY
+OPENAI_API_MODEL=gpt-3.5-turbo
+```
+   Replace `YOUR_OPENAI_API_KEY` with your actual API key.
+
+5. Run the main program:
+```
+python main.py
+```
 
 ## File Summary
 
@@ -29,65 +67,9 @@ Utility functions for counting tokens in text strings and OpenAI messages.
 ### index_search.py
 Functions to build search queries and search for files in a given folder using Windows Search.
 
-## Prerequisites
-- Libraries: 
-  - PyPDF2
-  - python-docx
-  - python-pptx
-  - pywin32
-  - tkinter
-  - dotenv
-  - openai
-  - argparse
-  - chromadb
-  - tiktoken
-  - langchain
-There may be more, I used OpenAI to generate this
-
-## Setup
-
-1. **Environment Variables**: Ensure that the `.env` file is present in the root directory and contains the `OPENAI_API_KEY` and `OPENAI_API_MODEL`.
-  
-   Example:
-   ```
-   OPENAI_API_KEY=your_openai_api_key_here
-   OPENAI_API_MODEL=gpt-3.5-turbo
-   ```
-
-2. **Python Libraries**: Install the necessary Python libraries.
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Folder Indexing**: Update `folder_path` in main. Then ensure the folder containing the PDF documents is indexed. If it's not indexed, the application might not return results.
-
 ## Usage
 
-1. Run the application:
-   ```bash
-   python main.py
-   ```
-
-2. You will be prompted to input a query. Enter your query related to the content you wish to search in the documents.
-
-3. The application will display the answer based on the content found in the documents.
-
-## Arguments
-
-- **Verbose Mode**: The application can be run in verbose mode using the `--verbose` argument, which provides more detailed output.
-- **Slow Mode**: With the `--slow` argument, the application will pause during verbose output, waiting for the user to press enter before proceeding.
-
-## Features
-- **File Search**: The application utilizes the Windows Search index to quickly locate files containing the search terms.
-
-## Limitations
-
-1. Limited to Windows as the Windows folder containing the files must be indexed.
-
-## Future Work
-
-- write OpenAI query - add in [existing repo](https://github.com/liamgwallace/OpenAI-FunctionCalling-HomeAssistantTools) with tools
-- Update to use OpenAI function calling
-- Add conversation memory to the chats
-- Provide a graphical user interface for easier interaction.
-
+1. Run the `main.py` script.
+2. You will be prompted to enter your query.
+3. The program will process the query, search the indexed documents, and return the most relevant content.
+4. Continue entering queries or exit the program.
