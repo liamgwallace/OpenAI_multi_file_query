@@ -18,22 +18,106 @@ Return ONLY the list
 """
 
 generate_keywords_prompt_user = """
-'''USER_QUERY
+```USER_QUERY
 {user_query}
-'''
+```
 """
 
 doc_refine_prompt_system = """
+#Your Task
+Use the information in the text extracts from DOCUMENT_EXTRACT_TEXTS and PARTIAL_ANSWERS to answer the USER_QUERY. 
+Only include relevant information some texts may be irrelevant
+If you dont have enough information return 'Not enough information to answer the query'
+Include any references and quotations as appropriate. 
+Return a list of relevant file links at the end of the response.
 
+
+#Example response
+```
+Answer:
+[response to the user query with relevant sources]
+
+Source Documents: # list of files relevant to answer and any page references or section references. Leave blank if no docs
+[filename][filepath][section name/number][page number]
+```
 """
-doc_refine_prompt_user = """
-'''DOCUMENT_SOURCES
-{document_sources}
-'''
 
-'''USER_QUERY
+doc_refine_prompt_user = """
+# DOCUMENT_EXTRACT_TEXTS
+```
+{document_text}
+```
+
+#PARTIAL_ANSWERS
+```
+{partial_answers}
+
+#USER_QUERY
+```
 {user_query}
-'''
+```
+"""
+
+doc_map_reduce_prompt_system = """
+#Your Task
+Use the information in the text extracts from DOCUMENT_EXTRACT_TEXTS to answer the USER_QUERY. 
+Only include relevant information some texts may be irrelevant
+If you dont have enough information return 'n/a'
+Include any references and quotations as appropriate. 
+Return a list of relevant file links at the end of the response.
+
+
+#Example response
+```
+Answer:
+[response to the user query with relevant sources]
+
+Source Documents: # list of files relevant to answer and any page references or section references. Leave blank if no docs
+[filename][filepath][section name/number][page number]
+```
+"""
+
+doc_map_reduce_prompt_user = """
+# DOCUMENT_EXTRACT_TEXTS
+```
+{document_text}
+```
+
+#USER_QUERY
+```
+{user_query}
+```
+"""
+
+doc_map_reduce_combine_prompt_system = """
+#Your Task
+Combine the information in the PARTIAL_ANSWERS to answer the USER_QUERY. 
+Only include relevant information some texts may be irrelevant
+If you dont have enough information return 'Not enough information to answer the query'
+Include any references and quotations as appropriate. 
+Return a list of relevant file links at the end of the response.
+
+
+#Example response
+```
+Answer:
+[response to the user query with relevant sources]
+
+Source Documents: # list of files relevant to answer and any page references or section references. Leave blank if no docs
+[filename][filepath][section name/number][page number]
+```
+"""
+
+doc_map_reduce_combine_prompt_user = """
+# PARTIAL_ANSWERS
+```
+{partial_answers}
+```
+
+#USER_QUERY
+```
+{user_query}
+```
 """
 
 # _system = """

@@ -1,5 +1,8 @@
 
 from dotenv import load_dotenv
+import concurrent.futures
+import random
+import time
 import re
 import sys
 import argparse
@@ -17,9 +20,10 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from token_counter import num_tokens_from_strings, num_tokens_from_messages
 from document_db import DocumentDB
 from document_loader import Document, DocumentLoader
-from ai_prompts import generate_keywords_prompt_user, generate_keywords_prompt_system, doc_refine_prompt_system, doc_refine_prompt_user
+from ai_prompts import generate_keywords_prompt_user, generate_keywords_prompt_system, doc_refine_prompt_system, doc_refine_prompt_user, doc_map_reduce_prompt_system, doc_map_reduce_prompt_user, doc_map_reduce_combine_prompt_system, doc_map_reduce_combine_prompt_user
 from index_search import search_files
 from embeddings import EmbeddingDB
+from openai_chat_interface import OpenAI_LLM, create_message, calculate_cost
 
 #system variables
 VERBOSE = False
@@ -85,14 +89,18 @@ def enter_folder():
     folder_path = os.path.normpath(folder_path)
     return folder_path
 
-def generate_search_keywords(user_query):
+def generate_search_keywords(user_query, system_prompt, user_prompt):
     #CODE  
     user_prompt = generate_keywords_prompt_user
     system_prompt = generate_keywords_prompt_system.format(user_query=user_query)
     
     #AI call placeholder
-    response_text=user_query
-    
+    llm_keywords = OpenAI_LLM(api_key=OPENAI_API_KEY, model=OPENAI_API_MODEL, temperature=0.2, system_message=system_prompt, user_message=user_prompt)
+    content_data = {
+        "user_query": user_query
+    }
+    llm_keywords.run(content_dict=content_data)
+    response_text = llm_keywords.response_content
     response_text = extract_last_line(response_text)
     search_keywords = remove_stopwords(response_text)
     return search_keywords
@@ -106,81 +114,105 @@ def split_docs(text, chunk_size=500, chunk_overlap=20):
     texts = text_splitter.split_text(text)
     return texts
 
-def combine_texts_with_metadata(texts, metadatas):        
-    combined_texts_and_metadatas = []
-    
-    for text, metadata in zip(texts, metadatas):
-        # Convert metadata dictionary into a formatted string
-        metadata_str = "; ".join([f"{key}: {value}" for key, value in metadata.items()])
-        
-        # Combine the text with its metadata
-        combined_text_and_metadata = f"[TEXT EXTRACT:'{text}'] [METADATA: '{metadata_str}']\n"
-        combined_texts_and_metadatas.append(combined_text_and_metadata)
-    
-    return combined_texts_and_metadatas
+import concurrent.futures
+import random
+import time
 
-def combine_texts(prompts, texts_and_metadatas, buffer, max_tokens):
+def document_query_map_reduce(user_query, system_prompt, user_prompt, system_prompt_combine, user_prompt_combine, document_texts, max_concurrent_requests=7):
     
-    # Calculate tokens used
-    prompt_tokens = sum([num_tokens_from_strings(prompt, OPENAI_API_MODEL) for prompt in prompts])
-    texts_tokens = [(text, num_tokens_from_strings(text, OPENAI_API_MODEL)) for text in texts_and_metadatas]
-    
-    # Calculate the maximum allowed tokens for texts_and_metadatas
-    max_allowed_tokens = max_tokens - prompt_tokens - buffer
-    
-    combined_texts = []
-    current_text = ""
-    current_tokens = 0
-    
-    for text, tokens in texts_tokens:
-        # If adding the next text doesn't exceed the max_allowed_tokens, append it
-        if current_tokens + tokens <= max_allowed_tokens:
-            current_text += f"\n{text}"
-            current_tokens += tokens
-        else:
-            # If it does exceed, then store the current_text and start a new one
-            combined_texts.append(current_text)
-            current_text = text
-            current_tokens = tokens
-    
-    # Append any remaining text
-    if current_text:
-        combined_texts.append(current_text)
-    
-    return combined_texts
+    def run_llm_request(document_text, index):
+        delay = 0.3 * index + random.uniform(0.0, 0.3)  # Calculate delay in seconds.
+        time.sleep(delay)
+        print_verbose(f"Sending ai response {index}")
+        local_llm = OpenAI_LLM(api_key=OPENAI_API_KEY, model=OPENAI_API_MODEL, temperature=0.2, system_message=system_prompt, user_message=user_prompt)
+        content_data = {
+            "user_query": user_query,
+            "document_text": document_text,
+            "partial_answers": ""
+        }
+        local_llm.run(content_dict=content_data)
+        print_verbose(f"Received ai response {index}")
+        response = f"[\n[{local_llm.response_content}]\n" 
+        local_llm.clear_memory()
+        # print_verbose(response)
+        return response
+
+    combined_responses = ""   
+    document_text = ""
+
+    if len(document_texts) > 1:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_concurrent_requests) as executor:
+            futures = [executor.submit(run_llm_request, doc_text, idx+1) for idx, doc_text in enumerate(document_texts)]
+            for future in concurrent.futures.as_completed(futures):
+                combined_responses += future.result()
+    else:
+        document_text = document_texts[0]
+
+    llm_map_combine = OpenAI_LLM(api_key=OPENAI_API_KEY, model=OPENAI_API_MODEL, temperature=0.2, system_message=system_prompt_combine, user_message=user_prompt_combine)
+    content_data = {
+        "user_query": user_query,
+        "document_text": document_text,
+        "partial_answers": combined_responses
+    }
+    print_verbose(f"Sending final ai response")
+    llm_map_combine.run(content_dict=content_data)
+    print_verbose(f"Received final ai response")
+    return llm_map_combine.response_content
+
+def document_query_refine(user_query, system_prompt, user_prompt, document_texts):
+    partial_answers = ""    
+    # user_message = [create_message("user", user_prompt)]
+    llm_refine = OpenAI_LLM(api_key=OPENAI_API_KEY, model=OPENAI_API_MODEL, temperature=0.2, system_message=system_prompt, user_message=user_prompt)
+    for document_text in document_texts:
+        content_data = {
+            "user_query": user_query,
+            "document_text": document_text,
+            "partial_answers": partial_answers
+        }
+        llm_refine.run(content_dict=content_data)
+        partial_answers = llm_refine.response_content
+        llm_refine.clear_memory()
+    return partial_answers
+    # llm.add_messages([llm.response_message])
     
 def document_query(user_query, folder_paths, chat_history, doc_db):
     #init stuff    
-    num_files=30
+    num_files=20
     num_vector_results=20
-    neighbor_text_count=2
-    chunk_overlap=20
-    chunk_size=200
+    neighbor_text_count=1000
+    chunk_overlap=200
+    chunk_size=500
+    response_token_buffer=1000
     embeddings_db = EmbeddingDB(api_key=OPENAI_API_KEY)
     doc_loader = DocumentLoader(whitelisted_extensions=["txt"])
     
+    generate_keywords_prompt_user
+    generate_keywords_prompt_system
+    doc_refine_prompt_system
+    doc_refine_prompt_user
+    doc_map_reduce_prompt_system
+    doc_map_reduce_prompt_user
+    
     
     #generate document search keywords
-    search_keywords=generate_search_keywords(user_query)
+    search_keywords=generate_search_keywords(user_query, generate_keywords_prompt_system, generate_keywords_prompt_user)
     print_verbose(f"Generated Keywords: '{search_keywords}'")
         
     #return list of matched files
     found_file_paths = search_files(folder_paths[0], search_keywords, num_files)
-    print_verbose(f"Found Files", found_file_paths)
   
     #check list against db
     file_paths_in_db, file_paths_not_in_db = doc_db.check_by_file(found_file_paths)   
     print_verbose(f"Files already indexed", file_paths_in_db)
     if file_paths_not_in_db:
         #read files
-        print_verbose(f"Files not indexed", file_paths_not_in_db)
-        print_verbose(f"loading to memory...")
+        print_verbose(f"Files not indexed", file_paths_not_in_db, f"\nloading to memory...")
         documents_list = doc_loader.load_from_files(file_paths_not_in_db)  
         #create embeddings
         for doc in documents_list:
             texts  = split_docs(doc.page_content, chunk_size, chunk_overlap)
             print_verbose(f"Making {len(texts)} embeddings for {doc.metadata['filepath']}")
-            embeddings = embeddings_db.make_embeddings(texts)            
+            embeddings = embeddings_db.make_embeddings(texts)
             delattr(doc, 'page_content')
             setattr(doc, 'texts', texts)
             setattr(doc, 'embeddings', embeddings)        
@@ -192,6 +224,12 @@ def document_query(user_query, folder_paths, chat_history, doc_db):
     print_verbose("Getting embeddings from db...")
     embeddings_and_ids = doc_db.get_embeddings_from_path(found_file_paths)
     
+    print_verbose("dumping db...")
+    doc_db.dump_to_txt('output.txt')
+    
+    print_verbose("saving db...")
+    doc_db.save()
+    
     #query the embeddings and return the IDs  
     print_verbose("Querying embeddings...")
     vector_query_results = embeddings_db.query_embeddings(
@@ -201,47 +239,32 @@ def document_query(user_query, folder_paths, chat_history, doc_db):
         n_results=num_vector_results        
     )
     relevant_ids = vector_query_results['ids']
-    print_verbose("relevant_ids",relevant_ids)
+    
+    # Retrieve relevant texts (and their neighbors) from the database using IDs    
+    prompts = [doc_refine_prompt_system, doc_refine_prompt_user]
+    prompts_tokens = sum([num_tokens_from_strings(prompt) for prompt in prompts])
+    max_allowed_tokens = get_max_tokens(OPENAI_API_MODEL) - prompts_tokens - response_token_buffer
     # Retrieve relevant texts (and their neighbors) from the database using IDs    
     print_verbose("Fetching texts from db...")
-    result = doc_db.get_texts_from_ids(
+    grouped_texts_and_metadatas = doc_db.get_texts_from_ids(
         ids=relevant_ids,
         neighbor_text_count=neighbor_text_count,
-        overlap=chunk_overlap
+        overlap=chunk_overlap,
+        max_tokens=max_allowed_tokens
     )
-    
-    # print(f"\nText Metadatas:")
-    # pprint(result['metadatas'])
-    # print(f"\nTexts: {result['texts']}\n")
-    # print(f"\nresult: {result}\n")
 
-    texts_and_metadatas=combine_texts_with_metadata(result['texts'], result['metadatas'])    
-    # print_verbose(f"\ntexts_and_metadatas:",texts_and_metadatas)
-    for text in texts_and_metadatas:
-        print(f"num tokens: {num_tokens_from_strings(text, OPENAI_API_MODEL)}")
-
-    doc_db.dump_to_txt('output.txt')
-    doc_db.save()
-
-    
-    #AI query to go here   
-        #either refine mode
-            #create answer, using refine loop
-    prompts = [doc_refine_prompt_system, doc_refine_prompt_user]
-    combined_texts = combine_texts(prompts, texts_and_metadatas,1000 , get_max_tokens(OPENAI_API_MODEL)) 
-    print(f"len combined_texts: {len(combined_texts)}")
-    for text in combined_texts:
-        print(f"num tokens: {num_tokens_from_strings(text, OPENAI_API_MODEL)}")
-    # print_verbose(f"\ncombined_texts:",combined_texts)
-        #or reduce mode
-            #Loop and create answer for each section
-            #create final answer from sections
-    #return the AI response when completed
-    result="result"
+    print_verbose(f"Sending {len(grouped_texts_and_metadatas)} sections to the ai...")
+    #AI query
+    # result=document_query_refine(user_query, doc_refine_prompt_system, doc_refine_prompt_user, grouped_texts_and_metadatas)
+    result=document_query_map_reduce(
+        user_query,
+        doc_map_reduce_prompt_system,
+        doc_map_reduce_prompt_user,
+        doc_map_reduce_combine_prompt_system,
+        doc_map_reduce_combine_prompt_user,
+        grouped_texts_and_metadatas
+        )    
     return result
-
-
-    
 
 def main():
     if VERBOSE:
@@ -254,10 +277,7 @@ def main():
         print()
         query = input("Enter your query: ")        
         answer = document_query(query, folder_paths, chat_history, doc_db)
-        print()
-        print("Answer: \n", answer)
-        print()
-        print()
+        print(f"\n\n{answer}\n\n")
         
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Search PDF documents with a query.")

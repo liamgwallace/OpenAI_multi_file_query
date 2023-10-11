@@ -1,3 +1,5 @@
+import time
+import logging
 import os
 import chromadb
 from chromadb.utils import embedding_functions
@@ -20,13 +22,30 @@ class EmbeddingDB:
         self.collection = self.client.get_or_create_collection(name='my_collection', embedding_function=self.embedding_function)
 
     def make_embeddings(self, texts):
-        return self.embedding_function(texts)
+        assert all(isinstance(text, str) for text in texts), "All elements in 'texts' should be strings."
+
+        # Split the texts list into chunks of 2040
+        def chunker(seq, size):
+            return (seq[pos:pos + size] for pos in range(0, len(seq), size))
+        
+        embeddings = []
+        try:
+            for chunk in chunker(texts, 2040):
+                embeddings.extend(self.embedding_function(chunk))
+                time.sleep(0.5)
+            return embeddings
+        except Exception as e:
+            print(f"Error while making embeddings for texts: {e}")
+            return None
+
 
     def query_embeddings(self, query_texts, embeddings, ids, n_results=10):
+        print("loading embeddings")
         self.collection.add(
             embeddings=embeddings,
             ids=ids
-        )
+        )        
+        print("querying embeddings")
         results = self.collection.query(
             query_texts=query_texts,
             n_results=n_results,

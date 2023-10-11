@@ -69,7 +69,11 @@ class DocumentLoader:
                     extension = filepath.split('.')[-1].lower()
 
                     if extension in ['pdf', 'docx', 'pptx'] or extension in self.whitelisted_extensions:
-                        content = self._load_document(filepath)
+                        try:
+                            content = self._load_document(filepath)
+                        except Exception as e:
+                            print(f"Error reading {filepath}: {e}")
+                            content = "Error reading document."
                         updated_time = self._convert_to_unix_timestamp(time.ctime(os.path.getmtime(filepath)))
                         created_time = self._convert_to_unix_timestamp(time.ctime(os.path.getctime(filepath)))
                         author = self._get_file_owner(filepath)
